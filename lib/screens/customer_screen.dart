@@ -7,6 +7,7 @@ import '../utils/dialogs.dart';
 import '../utils/format.dart';
 import '../utils/sms.dart';
 import '../widgets/product_card.dart';
+import 'add_customer_screen.dart';
 
 class CustomerScreen extends StatefulWidget {
   const CustomerScreen({super.key, required this.store, required this.customer});
@@ -24,7 +25,7 @@ class _CustomerScreenState extends State<CustomerScreen> {
   bool _busy = false;
 
   AppStore get store => widget.store;
-  Customer get customer => widget.customer;
+  Customer get customer => store.customerById(widget.customer.id) ?? widget.customer;
 
   @override
   void initState() {
@@ -51,6 +52,9 @@ class _CustomerScreenState extends State<CustomerScreen> {
   int _productTotal(Product p) => _priceOf(p) * _qtyOf(p);
 
   int get _grandTotal => kProducts.fold(0, (s, p) => s + _productTotal(p));
+
+  bool get _nothingEntered => kProducts.every((p) =>
+      _price[p.id]!.text.trim().isEmpty && _qty[p.id]!.text.trim().isEmpty);
 
   List<SaleItem> _enteredItems() {
     return [
@@ -129,6 +133,10 @@ class _CustomerScreenState extends State<CustomerScreen> {
   }
 
   Future<void> _onQarzgaOldi() async {
+    if (_nothingEntered) {
+      await _payExistingDebt();
+      return;
+    }
     final err = _validate();
     if (err != null) {
       await showBigMessage(context, err);
@@ -235,6 +243,90 @@ class _CustomerScreenState extends State<CustomerScreen> {
     );
   }
 
+  /// Hech narsa kiritilmaganda ishlaydi: eski qarzni qismen to'lash.
+  Future<void> _payExistingDebt() async {
+    final debt = store.customerDebt(customer.id);
+    if (debt <= 0) {
+      await showBigMessage(context, 'Qarz yo\'q');
+      return;
+    }
+    final given = await showDebtPaymentDialog(context, debt: debt);
+    if (given == null || !mounted) return;
+
+    final now = DateTime.now();
+    final t = Transaction(
+      id: newId(),
+      customerId: customer.id,
+      customerName: customer.name,
+      date: now,
+      items: const [],
+      amount: 0,
+      paid: given,
+    );
+    await store.addTransaction(t);
+    if (!mounted) return;
+    final newDebt = debt - given;
+    await showBigSuccess(
+      context,
+      title: 'QARZ TO\'LANDI',
+      message: "To'landi: ${money(given)}\nQolgan qarz: ${money(newDebt)}",
+      smsPhone: customer.phone,
+      smsBody: buildSmsText(
+        customerName: customer.name,
+        items: const [],
+        total: 0,
+        paid: given,
+        date: now,
+        remainingDebt: newDebt,
+      ),
+    );
+  }
+
+  Future<void> _editCustomer() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AddCustomerScreen(store: store, customer: customer),
+      ),
+    );
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _deleteCustomer() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        icon: const Icon(Icons.delete_forever_rounded,
+            size: 54, color: Color(0xFFC62828)),
+        title: const Text('MIJOZNI O\'CHIRISH', style: TextStyle(fontSize: 24)),
+        content: Text(
+          '${customer.name}\n\nBu mijoz va uning barcha savdo yozuvlari o\'chiriladi. Ishonchingiz komilmi?',
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 22, height: 1.4),
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('YO\'Q', style: TextStyle(fontSize: 22)),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(140, 56),
+              backgroundColor: const Color(0xFFC62828),
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('O\'CHIRISH', style: TextStyle(fontSize: 20)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    await store.deleteCustomer(customer.id);
+    if (mounted) Navigator.of(context).pop();
+  }
+
   @override
   Widget build(BuildContext context) {
     final debt = store.customerDebt(customer.id);
@@ -244,6 +336,20 @@ class _CustomerScreenState extends State<CustomerScreen> {
         return Scaffold(
           appBar: AppBar(
             title: Text(customer.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+            actions: [
+              IconButton(
+                iconSize: 32,
+                tooltip: 'Tahrirlash',
+                onPressed: _editCustomer,
+                icon: const Icon(Icons.edit_rounded),
+              ),
+              IconButton(
+                iconSize: 32,
+                tooltip: 'O\'chirish',
+                onPressed: _deleteCustomer,
+                icon: const Icon(Icons.delete_rounded),
+              ),
+            ],
           ),
           body: Column(
             children: [

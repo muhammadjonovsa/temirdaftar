@@ -11,12 +11,20 @@ String buildSmsText({
   required int total,
   required int paid,
   required DateTime date,
+  int? remainingDebt,
 }) {
   final b = StringBuffer();
   b.writeln('Assalomu alaykum, $customerName.');
   b.writeln('Sana: ${formatDate(date)}'); 
   if (items.isEmpty) {
     b.writeln('Qarz to\'lovi: ${money(paid)}');
+    if (remainingDebt != null) {
+      if (remainingDebt > 0) {
+        b.writeln('Qolgan qarzingiz: ${money(remainingDebt)}');
+      } else {
+        b.writeln('Qarzingiz to\'liq to\'landi.');
+      }
+    }
     b.writeln('Rahmat!');
     return b.toString();
   }
@@ -46,4 +54,19 @@ Future<void> sendSms(String phone, String body) async {
       Platform.isAndroid ? 'sms:$p?body=$query' : 'sms:$p&body=$query';
   await launchUrl(Uri.parse(uriString),
       mode: LaunchMode.externalApplication);
+}
+
+Future<void> sendTelegram(String body) async {
+  final text = Uri.encodeComponent(body);
+  try {
+    final opened = await launchUrl(
+      Uri.parse('tg://msg_url?url=&text=$text'),
+      mode: LaunchMode.externalApplication,
+    );
+    if (opened) return;
+  } catch (_) {}
+  await launchUrl(
+    Uri.parse('https://t.me/share/url?url=&text=$text'),
+    mode: LaunchMode.externalApplication,
+  );
 }

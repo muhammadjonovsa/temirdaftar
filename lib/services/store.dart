@@ -58,8 +58,43 @@ class AppStore extends ChangeNotifier {
     await _save();
   }
 
+  Future<void> updateCustomer(Customer customer) async {
+    final i = _customers.indexWhere((c) => c.id == customer.id);
+    if (i == -1) return;
+    _customers[i] = customer;
+    for (var j = 0; j < _transactions.length; j++) {
+      final t = _transactions[j];
+      if (t.customerId == customer.id) {
+        _transactions[j] = Transaction(
+          id: t.id,
+          customerId: t.customerId,
+          customerName: customer.name,
+          date: t.date,
+          items: t.items,
+          amount: t.amount,
+          paid: t.paid,
+        );
+      }
+    }
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> deleteCustomer(String id) async {
+    _customers.removeWhere((c) => c.id == id);
+    _transactions.removeWhere((t) => t.customerId == id);
+    notifyListeners();
+    await _save();
+  }
+
   Future<void> addTransaction(Transaction transaction) async {
     _transactions.add(transaction);
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> deleteTransaction(String id) async {
+    _transactions.removeWhere((t) => t.id == id);
     notifyListeners();
     await _save();
   }

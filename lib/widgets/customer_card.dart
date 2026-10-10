@@ -9,11 +9,17 @@ class CustomerCard extends StatelessWidget {
     required this.customer,
     required this.debt,
     this.onTap,
+    this.onLongPress,
+    this.onEdit,
+    this.onDelete,
   });
 
   final Customer customer;
   final int debt;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -25,6 +31,7 @@ class CustomerCard extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: InkWell(
         onTap: onTap,
+        onLongPress: onLongPress,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
           child: Row(
@@ -110,6 +117,44 @@ class CustomerCard extends StatelessWidget {
                   ],
                 ],
               ),
+              if (onEdit != null || onDelete != null)
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert_rounded,
+                      size: 28, color: Color(0xFF546E7A)),
+                  tooltip: 'Amallar',
+                  onSelected: (v) {
+                    if (v == 'edit') onEdit?.call();
+                    if (v == 'delete') onDelete?.call();
+                  },
+                  itemBuilder: (_) => [
+                    if (onEdit != null)
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit_rounded,
+                                size: 26, color: Color(0xFF106B66)),
+                            SizedBox(width: 12),
+                            Text('Tahrirlash', style: TextStyle(fontSize: 20)),
+                          ],
+                        ),
+                      ),
+                    if (onDelete != null)
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete_rounded,
+                                size: 26, color: Color(0xFFC62828)),
+                            SizedBox(width: 12),
+                            Text('O\'chirish',
+                                style: TextStyle(
+                                    fontSize: 20, color: Color(0xFFC62828))),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
             ],
           ),
         ),

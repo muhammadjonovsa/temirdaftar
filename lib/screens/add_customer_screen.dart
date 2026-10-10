@@ -5,9 +5,10 @@ import '../models/models.dart';
 import '../services/store.dart';
 
 class AddCustomerScreen extends StatefulWidget {
-  const AddCustomerScreen({super.key, required this.store});
+  const AddCustomerScreen({super.key, required this.store, this.customer});
 
   final AppStore store;
+  final Customer? customer;
 
   @override
   State<AddCustomerScreen> createState() => _AddCustomerScreenState();
@@ -18,6 +19,18 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
   final _name = TextEditingController();
   final _phone = TextEditingController();
   bool _saving = false;
+
+  bool get _isEditing => widget.customer != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final c = widget.customer;
+    if (c != null) {
+      _name.text = c.name;
+      _phone.text = c.phone;
+    }
+  }
 
   @override
   void dispose() {
@@ -30,30 +43,37 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
     final customer = Customer(
-      id: newId(),
+      id: widget.customer?.id ?? newId(),
       name: _name.text.trim(),
       phone: _phone.text.trim(),
     );
-    await widget.store.addCustomer(customer);
+    if (_isEditing) {
+      await widget.store.updateCustomer(customer);
+    } else {
+      await widget.store.addCustomer(customer);
+    }
     if (mounted) Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('YANGI MIJOZ')),
+      appBar: AppBar(title: Text(_isEditing ? 'MIJOZNI TAHRIRLASH' : 'YANGI MIJOZ')),
       body: Form(
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            const Icon(Icons.person_add_alt_1_rounded,
-                size: 80, color: Color(0xFF106B66)),
+            Icon(
+              _isEditing ? Icons.edit_rounded : Icons.person_add_alt_1_rounded,
+              size: 80,
+              color: const Color(0xFF106B66),
+            ),
             const SizedBox(height: 16),
-            const Text(
-              'Yangi mijoz qo\'shish',
+            Text(
+              _isEditing ? 'Mijoz ma\'lumotlarini o\'zgartirish' : 'Yangi mijoz qo\'shish',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 28),
             TextFormField(

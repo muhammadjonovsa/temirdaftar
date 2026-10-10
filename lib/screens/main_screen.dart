@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../models/models.dart';
 import '../services/store.dart';
 import '../widgets/customer_card.dart';
 import 'add_customer_screen.dart';
@@ -11,6 +12,48 @@ class MainScreen extends StatelessWidget {
   const MainScreen({super.key, required this.store});
 
   final AppStore store;
+
+  Future<void> _editCustomer(BuildContext context, Customer c) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AddCustomerScreen(store: store, customer: c),
+      ),
+    );
+  }
+
+  Future<void> _deleteCustomer(BuildContext context, Customer c) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        icon: const Icon(Icons.delete_forever_rounded,
+            size: 54, color: Color(0xFFC62828)),
+        title: const Text('MIJOZNI O\'CHIRISH', style: TextStyle(fontSize: 24)),
+        content: Text(
+          '${c.name}\n\nBu mijoz va uning barcha savdo yozuvlari o\'chiriladi. Ishonchingiz komilmi?',
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 22, height: 1.4),
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('YO\'Q', style: TextStyle(fontSize: 22)),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(140, 56),
+              backgroundColor: const Color(0xFFC62828),
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('O\'CHIRISH', style: TextStyle(fontSize: 20)),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) await store.deleteCustomer(c.id);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,6 +106,8 @@ class MainScreen extends StatelessWidget {
                   MaterialPageRoute(
                       builder: (_) => CustomerScreen(store: store, customer: c)),
                 ),
+                onEdit: () => _editCustomer(context, c),
+                onDelete: () => _deleteCustomer(context, c),
               );
             },
           );
